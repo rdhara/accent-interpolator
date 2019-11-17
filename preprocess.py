@@ -12,6 +12,7 @@ dialects = ['DR' + str(i) for i in range(1, 9)]
 phoneme_cols = ['start', 'end', 'phoneme']
 spec = MelSpectrogram(n_fft=1600, f_max=20000)
 padding = ConstantPad1d((400, 400), 0)
+epsilon = 1e-6
 
 
 def preprocess(pkl_path='timit_tokenized.pkl'):
@@ -34,7 +35,9 @@ def preprocess(pkl_path='timit_tokenized.pkl'):
                             subsample = sample[:, row[0]:row[1]]
                             if subsample.shape[1] <= spec.win_length // 2:
                                 subsample = padding(subsample)
-                            phoneme_samples[dataset][dialect][row[2]].append(spec(subsample).mean(2))
+                            phoneme_samples[dataset][dialect][row[2]].append(
+                                torch.log(spec(subsample).mean(2) + epsilon)
+                            )
 
                 for phoneme in phoneme_samples[dataset][dialect]:
                     phoneme_samples[dataset][dialect][phoneme] = \
