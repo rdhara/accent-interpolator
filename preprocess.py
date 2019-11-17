@@ -6,6 +6,7 @@ import torchaudio
 from collections import defaultdict
 from glob import glob
 from torch.nn import ConstantPad1d
+from torch.utils.data import DataLoader
 from torchaudio.transforms import MelSpectrogram
 
 dialects = ['DR' + str(i) for i in range(1, 9)]
@@ -45,6 +46,15 @@ def preprocess(pkl_path='timit_tokenized.pkl'):
 
     with open(pkl_path, 'wb') as f:
         pickle.dump(phoneme_samples, f)
+
+
+def generate_data_loaders(dialect, pkl_path='timit_tokenized.pkl'):
+    with open(pkl_path, 'rb') as f:
+        data_pkl = pickle.load(f)
+
+    train_data = torch.cat([torch.from_numpy(x) for x in data_pkl['TRAIN'][dialect].values()])
+    test_data = torch.cat([torch.from_numpy(x) for x in data_pkl['TEST'][dialect].values()])
+    return DataLoader(train_data), DataLoader(test_data)
 
 
 if __name__ == '__main__':

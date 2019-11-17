@@ -36,14 +36,17 @@ test_loader = torch.utils.data.DataLoader(
 
 
 class VAE(nn.Module):
-    def __init__(self):
+    def __init__(self, input_dim=784, hidden_dim=20):
         super(VAE, self).__init__()
-
-        self.fc1 = nn.Linear(784, 400)
-        self.fc21 = nn.Linear(400, 20)
-        self.fc22 = nn.Linear(400, 20)
-        self.fc3 = nn.Linear(20, 400)
-        self.fc4 = nn.Linear(400, 784)
+        
+        self.input_dim = input_dim
+        self.hidden_dim = hidden_dim
+        
+        self.fc1 = nn.Linear(input_dim, 400)
+        self.fc21 = nn.Linear(400, hidden_dim)
+        self.fc22 = nn.Linear(400, hidden_dim)
+        self.fc3 = nn.Linear(hidden_dim, 400)
+        self.fc4 = nn.Linear(400, input_dim)
 
     def encode(self, x):
         h1 = F.relu(self.fc1(x))
@@ -59,7 +62,7 @@ class VAE(nn.Module):
         return torch.sigmoid(self.fc4(h3))
 
     def forward(self, x):
-        mu, logvar = self.encode(x.view(-1, 784))
+        mu, logvar = self.encode(x.view(-1, self.input_dim))
         z = self.reparameterize(mu, logvar)
         return self.decode(z), mu, logvar
 
