@@ -48,13 +48,26 @@ def preprocess(pkl_path='timit_tokenized.pkl'):
         pickle.dump(phoneme_samples, f)
 
 
-def generate_data_loaders(dialect, pkl_path='timit_tokenized.pkl'):
+def generate_data_loaders(dialect, pkl_path='timit_tokenized.pkl', batch_size=1):
     with open(pkl_path, 'rb') as f:
         data_pkl = pickle.load(f)
 
     train_data = torch.cat([torch.from_numpy(x) for x in data_pkl['TRAIN'][dialect].values()])
     test_data = torch.cat([torch.from_numpy(x) for x in data_pkl['TEST'][dialect].values()])
-    return DataLoader(train_data), DataLoader(test_data)
+
+    return (
+        DataLoader(
+            dataset=train_data,
+            batch_size=batch_size,
+            shuffle=True
+        ),
+
+        DataLoader(
+            dataset=test_data,
+            batch_size=batch_size,
+            shuffle=True
+        )
+    )
 
 
 if __name__ == '__main__':
