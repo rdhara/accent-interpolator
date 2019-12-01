@@ -19,6 +19,7 @@ input_dim = 128
 hidden_dim = 32
 NUM_EPOCHS = 250
 
+
 class VAE(nn.Module):
     def __init__(self, input_dim=128, hidden_dim=20):
         super(VAE, self).__init__()
@@ -43,6 +44,7 @@ class VAE(nn.Module):
         z = self.reparameterize(mu, logvar)
         return self.decode(z), mu, logvar
 
+
 class SharedEncoder(nn.Module):
     def __init__(self, input_dim=128, hidden_dim=20):
         super(SharedEncoder, self).__init__()
@@ -57,6 +59,7 @@ class SharedEncoder(nn.Module):
         h1 = F.relu(self.fc1(x))
         return self.fc21(h1), self.fc22(h1)
 
+
 model_1 = VAE(input_dim=input_dim, hidden_dim=hidden_dim).to(device)
 model_2 = VAE(input_dim=input_dim, hidden_dim=hidden_dim).to(device)
 encoder = SharedEncoder(input_dim=input_dim, hidden_dim=hidden_dim).to(device)
@@ -70,11 +73,12 @@ optimizer = optim.Adam(
     lr=1e-3
 )
 
+
 # Reconstruction + KL divergence losses summed over all elements and batch
 def loss_function(recon_x, x, mu, logvar):
     MSE = F.mse_loss(recon_x, x.view(-1, 128), reduction='sum')
     KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
-    return MSE + KLD500
+    return MSE + KLD
 
 
 def train(epoch, train_loader_1, train_loader_2):
@@ -94,7 +98,6 @@ def train(epoch, train_loader_1, train_loader_2):
         train_loss += loss.item()
         optimizer.step()
         
-        
     for batch_idx, data in enumerate(train_loader_2):
         data = data.to(device)
         optimizer.zero_grad()
@@ -109,7 +112,7 @@ def train(epoch, train_loader_1, train_loader_2):
     return train_loss
 
 
-def test(epoch, test_loader_1, test_loader_2):
+def test(test_loader_1, test_loader_2):
     model_1.eval()
     model_2.eval()
     encoder.eval()
@@ -127,18 +130,19 @@ def test(epoch, test_loader_1, test_loader_2):
             recon_batch, mu, logvar = model_2(data, encoder)
             test_loss += loss_function(recon_batch, data, mu, logvar).item()
 
-
     test_loss /=  len(test_loader_1.dataset) + len(test_loader_2.dataset)
     print('\tTest set loss: {:.4f}'.format(test_loss))
     return test_loss
 
-train_trajectory, test_trajectory = [], []
 
-for epoch in range(1, NUM_EPOCHS + 1):
-    tr_loss = train(epoch, train_loader_dr1, train_loader_dr5)
-    train_trajectory.append(tr_loss)
-    vl_loss =  test(epoch, train_loader_dr1, train_loader_dr5)
-    test_trajectory.append(vl_loss)
+if __name__ == '__main__':
+    train_trajectory, test_trajectory = [], []
+
+    for epoch in range(1, NUM_EPOCHS + 1):
+        tr_loss = train(epoch, train_loader_dr1, train_loader_dr5)
+        train_trajectory.append(tr_loss)
+        vl_loss = test(train_loader_dr1, train_loader_dr5)
+        test_trajectory.append(vl_loss)
 
 # # Plotting Code
 # sns.set_style('whitegrid')

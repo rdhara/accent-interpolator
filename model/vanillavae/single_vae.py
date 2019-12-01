@@ -77,7 +77,7 @@ def train(epoch, train_loader):
     return train_loss / len(train_loader.dataset)
 
 
-def test(epoch, test_loader):
+def test(test_loader):
     model.eval()
     test_loss = 0
     with torch.no_grad():
@@ -90,50 +90,52 @@ def test(epoch, test_loader):
     print('====> Test set loss: {:.4f}'.format(test_loss))
     return test_loss
 
-NUM_EPOCHS = 100
-train_trajectory, test_trajectory = [], []
-train_loader_dr, test_loader_dr = generate_data_loaders('DR7', batch_size=4)
 
-for epoch in range(1, NUM_EPOCHS + 1):
-    train_trajectory.append(train(epoch, train_loader_dr))
-    test_trajectory.append(test(epoch, test_loader_dr))
+if __name__ == '__main__':
+    NUM_EPOCHS = 100
+    train_trajectory, test_trajectory = [], []
+    train_loader_dr, test_loader_dr = generate_data_loaders('DR7', batch_size=4)
+
+    for epoch in range(1, NUM_EPOCHS + 1):
+        train_trajectory.append(train(epoch, train_loader_dr))
+        test_trajectory.append(test(test_loader_dr))
 
 
 # Plotting code
 # Single Plot
-plt.figure()
-plt.title('New England VAE')
-plt.xlabel('Epoch')
-plt.ylabel('Loss (REC + KL)')
-plt.plot(train_trajectory, c='b', label='Training')
-plt.plot(test_trajectory, c='r', label='Validation')
-plt.legend()
-plt.savefig('dr_1.png', dpi=300)
-# Subplots
-sns.set_style('whitegrid')
-sns.set_context('paper', rc={'axes.labelsize': 8})
-sns.set_palette('muted', color_codes=True)
-
-f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2,2, figsize=(6,4))
-plt.suptitle('Individual Accent VAEs')
-axs = [ax1, ax2, ax3, ax4]
-titles = ['New England', 'North Midland', 'Southern', 'Western']
-
-for i in range(4):
-    train, test = trajs[i]
-    ax = axs[i]
-    ax.set_title(titles[i])
-    ax.set_xlabel('Epoch')
-    ax.set_ylabel('$\mathcal{L}$ = REC + KL')
-    ax.set_xlim([0, 100])
-    ax.set_ylim([0, 500])
-    ax.set_yticks([0, 100, 200, 300, 400, 500])
-    ax.plot(train, c='b', label='Training', lw=2)
-    ax.plot(test, c='r', label='Validation', lw=2)
-    ax.legend();
-
-f.tight_layout()
-plt.subplots_adjust(top=0.85)
-
-plt.savefig('accent_vaes.png', dpi=300)
+# plt.figure()
+# plt.title('New England VAE')
+# plt.xlabel('Epoch')
+# plt.ylabel('Loss (REC + KL)')
+# plt.plot(train_trajectory, c='b', label='Training')
+# plt.plot(test_trajectory, c='r', label='Validation')
+# plt.legend()
+# plt.savefig('dr_1.png', dpi=300)
+# # Subplots
+# sns.set_style('whitegrid')
+# sns.set_context('paper', rc={'axes.labelsize': 8})
+# sns.set_palette('muted', color_codes=True)
+#
+# f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2,2, figsize=(6,4))
+# plt.suptitle('Individual Accent VAEs')
+# axs = [ax1, ax2, ax3, ax4]
+# titles = ['New England', 'North Midland', 'Southern', 'Western']
+#
+# for i in range(4):
+#     train, test = trajs[i]
+#     ax = axs[i]
+#     ax.set_title(titles[i])
+#     ax.set_xlabel('Epoch')
+#     ax.set_ylabel('$\mathcal{L}$ = REC + KL')
+#     ax.set_xlim([0, 100])
+#     ax.set_ylim([0, 500])
+#     ax.set_yticks([0, 100, 200, 300, 400, 500])
+#     ax.plot(train, c='b', label='Training', lw=2)
+#     ax.plot(test, c='r', label='Validation', lw=2)
+#     ax.legend()
+#
+# f.tight_layout()
+# plt.subplots_adjust(top=0.85)
+#
+# plt.savefig('accent_vaes.png', dpi=300)
 
