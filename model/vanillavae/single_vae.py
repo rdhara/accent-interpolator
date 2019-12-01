@@ -2,15 +2,14 @@ from preprocess import generate_data_loaders
 from matplotlib import pyplot as plt
 
 import torch
+import seaborn as sns
 from torch import nn, optim
 from torch.nn import functional as F
-
 
 cuda = torch.cuda.is_available()
 torch.manual_seed(42)
 device = torch.device("cuda" if cuda else "cpu")
 kwargs = {'num_workers': 1, 'pin_memory': True} if cuda else {}
-train_loader_dr1, test_loader_dr1 = generate_data_loaders('DR1', batch_size=4)
 
 
 class VAE(nn.Module):
@@ -67,7 +66,7 @@ def train(epoch, train_loader):
         loss.backward()
         train_loss += loss.item()
         optimizer.step()
-        if batch_idx % 500 == 0:
+        if batch_idx % 2000 == 0:
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                 epoch, batch_idx * len(data), len(train_loader.dataset),
                        100. * batch_idx / len(train_loader),
@@ -91,19 +90,50 @@ def test(epoch, test_loader):
     print('====> Test set loss: {:.4f}'.format(test_loss))
     return test_loss
 
+NUM_EPOCHS = 100
+train_trajectory, test_trajectory = [], []
+train_loader_dr, test_loader_dr = generate_data_loaders('DR7', batch_size=4)
 
-if __name__ == '__main__':
+for epoch in range(1, NUM_EPOCHS + 1):
+    train_trajectory.append(train(epoch, train_loader_dr))
+    test_trajectory.append(test(epoch, test_loader_dr))
 
-    NUM_EPOCHS = 50
-    train_trajectory, test_trajectory = [], []
 
-    for epoch in range(1, NUM_EPOCHS + 1):
-        train_trajectory.append(train(epoch, train_loader_dr1))
-        test_trajectory.append(test(epoch, test_loader_dr1))
+# Plotting code
+# Single Plot
+plt.figure()
+plt.title('New England VAE')
+plt.xlabel('Epoch')
+plt.ylabel('Loss (REC + KL)')
+plt.plot(train_trajectory, c='b', label='Training')
+plt.plot(test_trajectory, c='r', label='Validation')
+plt.legend()
+plt.savefig('dr_1.png', dpi=300)
+# Subplots
+sns.set_style('whitegrid')
+sns.set_context('paper', rc={'axes.labelsize': 8})
+sns.set_palette('muted', color_codes=True)
 
-    plt.figure()
-    plt.xlabel('Epoch')
-    plt.ylabel('Loss (REC + KL)')
-    plt.plot(train_trajectory, c='b', label='Training')
-    plt.plot(test_trajectory, c='r', label='Validation')
-    plt.legend()
+f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2,2, figsize=(6,4))
+plt.suptitle('Individual Accent VAEs')
+axs = [ax1, ax2, ax3, ax4]
+titles = ['New England', 'North Midland', 'Southern', 'Western']
+
+for i in range(4):
+    train, test = trajs[i]
+    ax = axs[i]
+    ax.set_title(titles[i])
+    ax.set_xlabel('Epoch')
+    ax.set_ylabel('$\mathcal{L}$ = REC + KL')
+    ax.set_xlim([0, 100])
+    ax.set_ylim([0, 500])
+    ax.set_yticks([0, 100, 200, 300, 400, 500])
+    ax.plot(train, c='b', label='Training', lw=2)
+    ax.plot(test, c='r', label='Validation', lw=2)
+    ax.legend();
+
+f.tight_layout()
+plt.subplots_adjust(top=0.85)
+
+plt.savefig('accent_vaes.png', dpi=300)
+
