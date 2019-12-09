@@ -108,3 +108,4 @@ venv.bak/
 TIMIT/
 *.pkl
 .DS_Store
+*.wav

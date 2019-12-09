@@ -1,5 +1,6 @@
 import pandas
 import pickle
+import librosa
 import torch
 import torchaudio
 
@@ -9,11 +10,39 @@ from torch.nn import ConstantPad1d
 from torch.utils.data import DataLoader
 from torchaudio.transforms import MelSpectrogram
 
+n_fft = 1600
+n_mels = 128
+f_max = 20000
+sr = 16000
+hop_length = 160
+win_length = hop_length * 2
+max_len = sr // 2
 dialects = ['DR' + str(i) for i in range(1, 9)]
 phoneme_cols = ['start', 'end', 'phoneme']
-spec = MelSpectrogram(n_fft=1600, f_max=20000)
-padding = ConstantPad1d((400, 400), 0)
+spec = MelSpectrogram(n_fft=n_fft, f_max=f_max)
 epsilon = 1e-6
+
+
+def get_mspec(y):
+    return librosa.feature.melspectrogram(y, sr=sr, n_fft=n_fft, hop_length=hop_length, win_length=win_length)
+
+
+def inverse_melspec(s):
+    return librosa.feature.inverse.mel_to_audio(s, sr=sr, n_fft=n_fft, hop_length=hop_length, win_length=win_length)
+
+
+def wav_to_padded_mspec_flat_tensor(wav, length):
+    assert(length <= max_len)
+    p_len = max_len - length
+    padding = ConstantPad1d((0, p_len), 0)
+    return torch.Tensor(get_mspec(padding(wav).flatten().data.numpy())).view(-1)
+
+
+# to get stitched audio from a list of phoneme wavs `wavs`, run
+# `librosa.output.write_wav('outpath.wav', numpy.hstack(wavs), sr=sr)`
+def padded_mspec_flat_tensor_to_wav(mspec_flat, orig_len):
+    padded_mspec = mspec_flat.view(n_mels, -1).data.numpy()
+    return inverse_melspec(padded_mspec)[:orig_len]
 
 
 def preprocess(pkl_path='timit_tokenized.pkl'):
@@ -34,10 +63,12 @@ def preprocess(pkl_path='timit_tokenized.pkl'):
                         df_sample = pandas.read_csv(current_path + '.PHN', sep=' ', names=phoneme_cols)
                         for _, row in df_sample.iterrows():
                             subsample = sample[:, row[0]:row[1]]
-                            if subsample.shape[1] <= spec.win_length // 2:
-                                subsample = padding(subsample)
+                            phn_len = row[1] - row[0]
+                            if phn_len > max_len:
+                                continue
+                            mspec_flat_tensor = wav_to_padded_mspec_flat_tensor(subsample, phn_len)
                             phoneme_samples[dataset][dialect][row[2]].append(
-                                torch.log(spec(subsample).mean(2) + epsilon)
+                                torch.log(mspec_flat_tensor + epsilon)
                             )
 
                 for phoneme in phoneme_samples[dataset][dialect]:
