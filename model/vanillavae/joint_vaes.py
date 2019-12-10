@@ -1,5 +1,5 @@
 from itertools import chain
-from preprocess import generate_data_loaders
+from utils import generate_data_loaders
 from matplotlib import pyplot as plt
 
 import torch
@@ -23,10 +23,10 @@ NUM_EPOCHS = 250
 class VAE(nn.Module):
     def __init__(self, input_dim=128, hidden_dim=20):
         super(VAE, self).__init__()
-        
+
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
-        
+
         self.fc3 = nn.Linear(hidden_dim, 400)
         self.fc4 = nn.Linear(400, input_dim)
 
@@ -50,11 +50,11 @@ class SharedEncoder(nn.Module):
         super(SharedEncoder, self).__init__()
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
-        
+
         self.fc1 = nn.Linear(input_dim, 400)
         self.fc21 = nn.Linear(400, hidden_dim)
         self.fc22 = nn.Linear(400, hidden_dim)
-    
+
     def forward(self, x):
         h1 = F.relu(self.fc1(x))
         return self.fc21(h1), self.fc22(h1)
@@ -82,13 +82,13 @@ def loss_function(recon_x, x, mu, logvar):
 
 
 def train(epoch, train_loader_1, train_loader_2):
-    
+
     model_1.train()
     model_2.train()
     encoder.train()
 
     train_loss = 0
-    
+
     for batch_idx, data in enumerate(train_loader_1):
         data = data.to(device)
         optimizer.zero_grad()
@@ -97,7 +97,7 @@ def train(epoch, train_loader_1, train_loader_2):
         loss.backward()
         train_loss += loss.item()
         optimizer.step()
-        
+
     for batch_idx, data in enumerate(train_loader_2):
         data = data.to(device)
         optimizer.zero_grad()
@@ -106,7 +106,7 @@ def train(epoch, train_loader_1, train_loader_2):
         loss.backward()
         train_loss += loss.item()
         optimizer.step()
-        
+
     train_loss /= len(train_loader_1.dataset) + len(train_loader_2.dataset)
     print('====> Epoch: {}\n\tTraining set loss: {:.4f}'.format(epoch, train_loss))
     return train_loss
@@ -116,21 +116,21 @@ def test(test_loader_1, test_loader_2):
     model_1.eval()
     model_2.eval()
     encoder.eval()
-    
+
     test_loss = 0
-    
+
     with torch.no_grad():
         for i, data in enumerate(test_loader_1):
             data = data.to(device)
             recon_batch, mu, logvar = model_1(data, encoder)
             test_loss += loss_function(recon_batch, data, mu, logvar).item()
-            
+
         for i, data in enumerate(test_loader_2):
             data = data.to(device)
             recon_batch, mu, logvar = model_2(data, encoder)
             test_loss += loss_function(recon_batch, data, mu, logvar).item()
 
-    test_loss /=  len(test_loader_1.dataset) + len(test_loader_2.dataset)
+    test_loss /= len(test_loader_1.dataset) + len(test_loader_2.dataset)
     print('\tTest set loss: {:.4f}'.format(test_loss))
     return test_loss
 

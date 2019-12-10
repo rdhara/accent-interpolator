@@ -7,8 +7,8 @@ import torchaudio
 from collections import defaultdict
 from glob import glob
 from torch.nn import ConstantPad1d
-from torch.utils.data import DataLoader
 from torchaudio.transforms import MelSpectrogram
+from tqdm import tqdm
 
 n_fft = 1600
 n_mels = 128
@@ -16,7 +16,7 @@ f_max = 20000
 sr = 16000
 hop_length = 160
 win_length = hop_length * 2
-max_len = sr // 2
+max_len = sr // 4
 dialects = ['DR' + str(i) for i in range(1, 9)]
 phoneme_cols = ['start', 'end', 'phoneme']
 spec = MelSpectrogram(n_fft=n_fft, f_max=f_max)
@@ -35,7 +35,7 @@ def wav_to_padded_mspec_flat_tensor(wav, length):
     assert(length <= max_len)
     p_len = max_len - length
     padding = ConstantPad1d((0, p_len), 0)
-    return torch.Tensor(get_mspec(padding(wav).flatten().data.numpy())).view(-1)
+    return torch.Tensor(get_mspec(padding(wav).flatten().data.numpy())).view(1, -1)
 
 
 # to get stitched audio from a list of phoneme wavs `wavs`, run
@@ -55,7 +55,7 @@ def preprocess(pkl_path='timit_tokenized.pkl'):
         for dataset in ['TRAIN', 'TEST']:
             for dialect in dialects:
                 speakers = glob(f'TIMIT/{dataset}/{dialect}/M*')
-                for speaker in speakers:
+                for speaker in tqdm(speakers):
                     sentences = set(path.split('/')[-1][:-4] for path in glob(speaker + '/*'))
                     for sentence in sentences:
                         current_path = f'TIMIT/{dataset}/{dialect}/{speaker.split("/")[-1]}/{sentence}'
@@ -77,28 +77,6 @@ def preprocess(pkl_path='timit_tokenized.pkl'):
 
     with open(pkl_path, 'wb') as f:
         pickle.dump(phoneme_samples, f)
-
-
-def generate_data_loaders(dialect, pkl_path='timit_tokenized.pkl', batch_size=1):
-    with open(pkl_path, 'rb') as f:
-        data_pkl = pickle.load(f)
-
-    train_data = torch.cat([torch.from_numpy(x) for x in data_pkl['TRAIN'][dialect].values()])
-    test_data = torch.cat([torch.from_numpy(x) for x in data_pkl['TEST'][dialect].values()])
-
-    return (
-        DataLoader(
-            dataset=train_data,
-            batch_size=batch_size,
-            shuffle=True
-        ),
-
-        DataLoader(
-            dataset=test_data,
-            batch_size=batch_size,
-            shuffle=True
-        )
-    )
 
 
 if __name__ == '__main__':

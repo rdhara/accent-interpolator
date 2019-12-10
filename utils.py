@@ -1,5 +1,6 @@
+import pickle
 import torch
-from model.vanillavae.joint_vaes import VAE, SharedEncoder
+from torch.utils.data import DataLoader
 
 
 def latent_space_interpolator(encoder_mlp, decoder_vae, mspec_lst, z_coeff):
@@ -7,8 +8,6 @@ def latent_space_interpolator(encoder_mlp, decoder_vae, mspec_lst, z_coeff):
     # Some sanity checks
     assert len(mspec_lst) == len(z_coeff)
     assert sum(z_coeff) == 1
-    assert isinstance(encoder_mlp, SharedEncoder)
-    assert isinstance(decoder_vae, VAE)
 
     with torch.no_grad():
 
@@ -27,12 +26,23 @@ def latent_space_interpolator(encoder_mlp, decoder_vae, mspec_lst, z_coeff):
         return decoder_vae.decode(z_interp)
 
 
-if __name__ == '__main__':
-    # Example usage
-    output_spec = latent_space_interpolator(
-        encoder_mlp=SharedEncoder(),
-        decoder_vae=VAE(),
-        mspec_lst=[torch.randn(128), torch.randn(128)],
-        z_coeff=[0.4, 0.6]
+def generate_data_loaders(dialect, pkl_path='timit_tokenized.pkl', batch_size=1):
+    with open(pkl_path, 'rb') as f:
+        data_pkl = pickle.load(f)
+
+    train_data = torch.cat([torch.from_numpy(x) for x in data_pkl['TRAIN'][dialect].values()])
+    test_data = torch.cat([torch.from_numpy(x) for x in data_pkl['TEST'][dialect].values()])
+
+    return (
+        DataLoader(
+            dataset=train_data,
+            batch_size=batch_size,
+            shuffle=True
+        ),
+
+        DataLoader(
+            dataset=test_data,
+            batch_size=batch_size,
+            shuffle=True
+        )
     )
-    print(output_spec)
